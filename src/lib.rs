@@ -6,7 +6,7 @@ pub struct TcpRecord {
     payload: Vec<u8>,
 }
 pub trait Protocol {
-    fn deliver(&self, record: Vec<TcpRecord>, stream: TlsStream<TcpStream>) -> ();
+    fn deliver(&self, stream: TlsStream<TcpStream>) -> ();
 }
 
 pub struct ClientEstablishment {
@@ -18,7 +18,7 @@ pub struct ClientEstablishment {
 }
 
 impl Protocol for ClientEstablishment {
-    fn deliver(&self, _record: Vec<TcpRecord>, _stream: TlsStream<TcpStream>) -> () {
+    fn deliver(&self, _stream: TlsStream<TcpStream>) -> () {
         todo!("Not implemented");
     }
 }

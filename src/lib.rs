@@ -35,7 +35,7 @@ pub struct ServerEstablishment {
 }
 
 impl Protocol for ServerEstablishment {
-    fn deliver(&self, _record: Vec<TcpRecord>, _stream: TlsStream<TcpStream>) -> () {
+    fn deliver(&self, _stream: TlsStream<TcpStream>) -> () {
         todo!("Not implemented");
     }
 }

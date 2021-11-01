@@ -1,6 +1,9 @@
-use std::net::{IpAddr, TcpStream};
+use std::{net::IpAddr, panic};
 
 use argh::FromArgs;
+
+mod builder;
+mod connection;
 
 #[derive(FromArgs)]
 /// Client arguments
@@ -9,10 +12,14 @@ struct ClientArguments {
     host: String,
 
     #[argh(positional)]
-    port: u8,
+    port: u16,
 }
 
 fn main() -> std::io::Result<()> {
+    let builder = builder::EstablishmentBuilder::new();
+    let establishment = builder.build();
+    println!("{:?}", establishment);
+
     let options: ClientArguments = argh::from_env();
 
     let ipaddr = match options.host.parse::<IpAddr>() {
@@ -21,8 +28,9 @@ fn main() -> std::io::Result<()> {
     };
 
     let port = options.port;
+
     let url = format!("{}:{}", ipaddr, port);
-    let mut stream = TcpStream::connect(&url)?;
+    println!("url: {}", url);
 
     Ok(())
 }

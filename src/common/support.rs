@@ -1,4 +1,6 @@
-pub const NTP: u16 = 0;
+use crate::protocol::NTS_NEXT_PROTOCOL_NTP_ID;
+// IDs supported for next
+pub const NTS_NEXT_PROTCOL_SUPPORTED_IDS: &'static [u16] = &[NTS_NEXT_PROTOCOL_NTP_ID];
 
 // https://www.iana.org/assignments/aead-parameters/aead-parameters.xhtml
 pub const AES_SIV_CMAC_256: u16 = 15;

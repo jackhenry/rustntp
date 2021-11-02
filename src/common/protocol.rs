@@ -1,12 +1,19 @@
-pub const NTP_PROTOCOL_ID: u16 = 1;
+// IANA NTS Next Protocol Registry
+// Only NTP is supported current
+pub const NTS_NEXT_PROTOCOL_NTP_ID: u16 = 0;
 
 pub mod ntske {
     use std::net::IpAddr;
-
-    #[derive(Debug)]
-    pub struct TcpRecord {
-        pub payload: Vec<u8>,
-    }
+    
+    // Recrod type numbers defined in RFC 8915
+    pub const END_OF_MESSAGE_RECORD_TYPE_NUMBER: u16 = 0;
+    pub const NTS_NEXT_PROTOCOL_RECORD_TYPE_NUMBER: u16 = 1;
+    pub const ERROR_MESSAGE_RECORD_TYPE_NUMBER: u16 = 2;
+    pub const WARNING_MESSAGE_RECORD_TYPE_NUMBER: u16 = 3;
+    pub const AEAD_ALGORITHM_RECORD_TYPE_NUMBER: u16 = 4;
+    pub const NEW_COOKIE_NTPV4_RECORD_TYPE_NUMBER: u16 = 5;
+    pub const NTPV4_SERVER_NEGOTIATION_RECORD_TYPE: u16 = 6;
+    pub const NTPV4_PORT_NEGOTIATION_RECORD_TYPE: u16 = 7;
 
     #[derive(Debug)]
     pub struct EndOfMessageRecord {}

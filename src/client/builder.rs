@@ -1,139 +1,106 @@
-use std::net::{IpAddr, Ipv4Addr};
+use std::net::IpAddr;
 
 use rustntp::establishment::ClientEstablishment;
-use rustntp::protocol::ntske::{
-    ClientAEADAlgorithmRecord, EndOfMessageRecord, NextProtocolNegotiationRecord,
-    PortNegotiationRecord, ServerNegotiationRecord,
-};
-use rustntp::protocol::NTP_PROTOCOL_ID;
-use rustntp::support::{self, AES_SIV_CMAC_256};
+use rustntp::protocol::ntske::*;
+use rustntp::support;
 
-pub struct EstablishmentBuilder {
-    client_establishment: ClientEstablishment,
+#[derive(Debug)]
+pub struct ClientEstablishmentBuilder {
+    pub end_of_message: Option<EndOfMessageRecord>,
+    pub next_protocol_negotiation: Option<NextProtocolNegotiationRecord>,
+    pub aead_algorithm_negotiation: Option<ClientAEADAlgorithmRecord>,
+    pub server_negotiation: Option<ServerNegotiationRecord>,
+    pub port_negotiation: Option<PortNegotiationRecord>,
 }
 
-impl EstablishmentBuilder {
-    pub fn new() -> EstablishmentBuilder {
-        EstablishmentBuilder {
-            client_establishment: ClientEstablishment::new(),
+impl ClientEstablishmentBuilder {
+    pub fn new() -> ClientEstablishmentBuilder {
+        ClientEstablishmentBuilder {
+            end_of_message: None,
+            next_protocol_negotiation: None,
+            aead_algorithm_negotiation: None,
+            server_negotiation: None,
+            port_negotiation: None,
         }
     }
-
-    pub fn end_of_message(&mut self) -> Result<&EstablishmentBuilder, ()> {
-        self.client_establishment.end_of_message = Some(EndOfMessageRecord {});
-        Ok(self)
+    
+    pub fn end_of_message(mut self) -> Self {
+        self.end_of_message = Some(EndOfMessageRecord {});
+        self
     }
-
+    
     pub fn next_protocol_negotiation(
-        &mut self,
+        mut self,
         protocol: u16,
-    ) -> Result<&EstablishmentBuilder, rustntp::Error> {
-        if matches!(protocol, support::NTP) {
-            return Err(rustntp::Error::UnsupportedProtocol);
-        }
-
-        let protocol_ids = vec![NTP_PROTOCOL_ID];
-        self.client_establishment.next_protocol_negotiation =
+    ) -> Self {
+        let protocol_ids = vec![protocol];
+        self.next_protocol_negotiation =
             Some(NextProtocolNegotiationRecord { protocol_ids });
-        Ok(self)
+        self
     }
 
     pub fn aead_algorithm_negotiation(
-        &mut self,
+        mut self,
         algorithms: Vec<u16>,
-    ) -> Result<&EstablishmentBuilder, rustntp::Error> {
+    ) -> Self {
         let invalid_algorithm = |algorithm| !support::SUPPORTED_AEAD_ALGORITHMS.contains(algorithm);
 
         if algorithms.iter().any(invalid_algorithm) {
-            return Err(rustntp::Error::UnsupportedAlgorithm);
         }
 
-        self.client_establishment.aead_algorithm_negotiation =
+        self.aead_algorithm_negotiation =
             Some(ClientAEADAlgorithmRecord { algorithms });
-        Ok(self)
+        self
     }
 
     pub fn server_negotiation(
-        &mut self,
+        mut self,
         server_address: IpAddr,
-    ) -> Result<&EstablishmentBuilder, ()> {
-        self.client_establishment.server_negotiation =
+    ) -> Self {
+        self.server_negotiation =
             Some(ServerNegotiationRecord { server_address });
+        self
+    }
+
+    pub fn port_negotiation(mut self, port: u16) -> Self {
+        self.port_negotiation = Some(PortNegotiationRecord { port });
+        self
+    }
+    
+    fn validate(&self) -> Result<&Self, rustntp::Error> {
+        
+        // Verify that no fields are set to None
+        self.end_of_message.as_ref().ok_or(rustntp::Error::MissingEstablishmentRecord(String::from("end of message")))?;
+        self.next_protocol_negotiation.as_ref().ok_or(rustntp::Error::MissingEstablishmentRecord(String::from("next protocol negotiation")))?;
+        self.aead_algorithm_negotiation.as_ref().ok_or(rustntp::Error::MissingEstablishmentRecord(String::from("aead algorithm negotiation")))?;
+        self.server_negotiation.as_ref().ok_or(rustntp::Error::MissingEstablishmentRecord(String::from("server negotiation")))?;
+        self.port_negotiation.as_ref().ok_or(rustntp::Error::MissingEstablishmentRecord(String::from("port negotiation")))?;
+        
+        let protocol_ids = self.next_protocol_negotiation.as_ref().unwrap().protocol_ids.clone();
+        let invalid_protcol_ids = |id: &u16| !support::NTS_NEXT_PROTCOL_SUPPORTED_IDS.contains(id);
+        if let Some(id) = protocol_ids.into_iter().filter(invalid_protcol_ids).next() {
+            return Err(rustntp::Error::UnsupportedNTSNextProtocolID(id))
+        }
+        
+        let algorithm_ids = self.aead_algorithm_negotiation.as_ref().unwrap().algorithms.clone();
+        let invalid_algorithm_ids = |id: &u16| !support::SUPPORTED_AEAD_ALGORITHMS.contains(id);
+        if let Some(id) = algorithm_ids.into_iter().filter(invalid_algorithm_ids).next() {
+            return Err(rustntp::Error::UnsupportedNTSAlgorithmID(id))
+        }
+
         Ok(self)
     }
+    
+    pub fn build(self) -> Result<ClientEstablishment, rustntp::Error> {
 
-    pub fn port_negotiation(&mut self, port: u16) -> Result<&EstablishmentBuilder, ()> {
-        self.client_establishment.port_negotiation = Some(PortNegotiationRecord { port });
-        Ok(self)
-    }
+        self.validate()?;
 
-    /// Initializes any unset ```ClientEstablishment``` fields before calling ```build()```
-    pub fn build_with_defaults(&mut self) -> Result<&ClientEstablishment, rustntp::Error> {
-        let mut establishment = &mut self.client_establishment;
-        establishment
-            .end_of_message
-            .get_or_insert(EndOfMessageRecord {});
-
-        establishment
-            .next_protocol_negotiation
-            .get_or_insert(NextProtocolNegotiationRecord {
-                protocol_ids: vec![support::NTP],
-            });
-
-        establishment
-            .aead_algorithm_negotiation
-            .get_or_insert(ClientAEADAlgorithmRecord {
-                algorithms: vec![AES_SIV_CMAC_256],
-            });
-
-        establishment
-            .server_negotiation
-            .get_or_insert(ServerNegotiationRecord {
-                server_address: IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)),
-            });
-
-        establishment
-            .port_negotiation
-            .get_or_insert(PortNegotiationRecord { port: 4406 });
-
-        self.build()
-    }
-
-    /// verifies that there are no ```ClientEstablishment``` fields set to ```None```.
-    /// Then, returns pointer to the ```ClientEstablishment``` struct.
-    pub fn build(&self) -> Result<&ClientEstablishment, rustntp::Error> {
-        let establishment = &self.client_establishment;
-
-        establishment
-            .end_of_message
-            .ok_or(rustntp::Error::MissingEstablishmentRecord(String::from(
-                "end of message",
-            )));
-
-        establishment
-            .next_protocol_negotiation
-            .ok_or(rustntp::Error::MissingEstablishmentRecord(String::from(
-                "next protocol negotiation",
-            )));
-
-        establishment
-            .aead_algorithm_negotiation
-            .ok_or(rustntp::Error::MissingEstablishmentRecord(String::from(
-                "AEAD algorithm negotiation",
-            )));
-
-        establishment
-            .server_negotiation
-            .ok_or(rustntp::Error::MissingEstablishmentRecord(String::from(
-                "server negotiation",
-            )));
-
-        establishment
-            .port_negotiation
-            .ok_or(rustntp::Error::MissingEstablishmentRecord(String::from(
-                "port negotiation",
-            )));
-
-        Ok(&self.client_establishment)
-    }
+        Ok(ClientEstablishment {
+            end_of_message: self.end_of_message.unwrap(),
+            next_protocol_negotiation: self.next_protocol_negotiation.unwrap(),
+            aead_algorithm_negotiation: self.aead_algorithm_negotiation.unwrap(),
+            server_negotiation: self.server_negotiation.unwrap(),
+            port_negotiation: self.port_negotiation.unwrap()
+        })
+    } 
 }

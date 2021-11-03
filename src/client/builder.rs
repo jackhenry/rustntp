@@ -55,7 +55,7 @@ impl ClientEstablishmentBuilder {
     }
 
     fn validate(&self) -> Result<&Self, rustntp::Error> {
-        // Verify that no fields are set to None
+        // Verify that no fields are set to 
         self.end_of_message
             .as_ref()
             .ok_or(rustntp::Error::MissingEstablishmentRecord(String::from(

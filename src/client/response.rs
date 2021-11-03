@@ -1,7 +1,10 @@
-pub trait ExecutionResponse {}
-
-pub struct KeyEstablismentResponse {
-    // Prevent direct creation with literal syntax
+#[derive(Debug)]
+pub enum ExecutionResponseType {
+    KeyEstablishment(KeyEstablismentResponse),
+    ClockSync
 }
 
-impl ExecutionResponse for KeyEstablismentResponse {}
+
+#[derive(Debug)]
+pub struct KeyEstablismentResponse {
+}

@@ -1,11 +1,14 @@
-use crate::response::ExecutionResponse;
+use std::fmt;
+
+use crate::response::{ExecutionResponseType};
 
 pub trait ExecutionRequest {
-    fn execute(&self) -> Box<dyn ExecutionResponse>;
+    type ResponseType: fmt::Debug;
+    fn execute(&self) -> Self::ResponseType;
 }
 
-struct ExecutionHandler {
-    commands: Vec<Box<dyn ExecutionRequest>>,
+pub struct ExecutionHandler {
+    commands: Vec<Box<dyn ExecutionRequest<ResponseType = ExecutionResponseType>>>,
 }
 
 impl ExecutionHandler {
@@ -13,11 +16,11 @@ impl ExecutionHandler {
         Self { commands: vec![] }
     }
 
-    pub fn enqueue(&mut self, command: Box<dyn ExecutionRequest>) {
+    pub fn enqueue(&mut self, command: Box<dyn ExecutionRequest<ResponseType = ExecutionResponseType>>) {
         self.commands.push(command);
     }
 
-    pub fn execute_all(&mut self) -> Vec<Box<dyn ExecutionResponse>> {
+    pub fn execute_all(&mut self) -> Vec<ExecutionResponseType> {
         // Execute commands in queue in order and collect responses
         let responses = self
             .commands

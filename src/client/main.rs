@@ -10,6 +10,7 @@ mod builder;
 mod config;
 mod connection;
 mod execution;
+mod ntske;
 mod response;
 
 #[derive(FromArgs)]

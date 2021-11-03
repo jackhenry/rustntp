@@ -1,24 +1,31 @@
-use std::{default::Default, env, path::Path};
 use serde::{Deserialize, Serialize};
+use std::{default::Default, path::Path};
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct ClientConfig {
-    servers: Option<Vec<Server>>,
-    pools: Option<Vec<Pool>>
+    pub servers: Option<Vec<Server>>,
+    pub pools: Option<Vec<Pool>>,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Server {
-    address: String,
-    port: Option<u16>,
-    ntske_server: Option<Vec<Server>>,
+    pub address: String,
+    pub port: Option<u16>,
+    pub ntske_server: Option<NTSKeyExchangeServer>,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct NTSKeyExchangeServer {
+    pub address: Option<String>,
+    pub port: Option<u16>,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Pool {
-    address: String,
-    port: Option<u16>,
+    pub address: String,
+    pub port: Option<u16>,
 }
+
 const DEFAULT_NTP_PORT: u16 = 123;
 const DEFAULT_NTP_SERVER_HOST: &str = "127.0.0.1";
 
@@ -27,12 +34,12 @@ impl Default for ClientConfig {
         let default_server = Server {
             address: DEFAULT_NTP_SERVER_HOST.to_string(),
             port: Some(DEFAULT_NTP_PORT),
-            ntske_server: None
+            ntske_server: None,
         };
 
         Self {
             servers: Some(vec![default_server]),
-            pools: None
+            pools: None,
         }
     }
 }
@@ -40,11 +47,9 @@ impl Default for ClientConfig {
 pub struct ConfigManager;
 
 impl ConfigManager {
-
     /// Load config from default location(s)
     // TODO: figure out best practices
-    pub fn load() {
-    }
+    pub fn load() {}
 
     /// Load config from specific path
     pub fn load_from(path: &String) -> Result<ClientConfig, rustntp::Error> {
@@ -53,14 +58,15 @@ impl ConfigManager {
 
     pub fn load_from_or_default(path: &String) -> Result<ClientConfig, rustntp::Error> {
         let config_path = Path::new(path);
-        let loaded_config = if !config_path.exists() { Ok(ClientConfig::default()) } else { Self::load_from(path) };
-        
+        let loaded_config = if !config_path.exists() {
+            Ok(ClientConfig::default())
+        } else {
+            Self::load_from(path)
+        };
+
         loaded_config
     }
 
     // Used to write/update a config to default config location
-    pub fn write_config(config: ClientConfig) {
-
-    }
-
+    pub fn write_config(config: ClientConfig) {}
 }

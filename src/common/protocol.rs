@@ -3,8 +3,7 @@
 pub const NTS_NEXT_PROTOCOL_NTP_ID: u16 = 0;
 
 pub mod ntske {
-    use std::net::IpAddr;
-    
+    pub const DEFAULT_NTS_PORT: u16 = 4406;
     // Recrod type numbers defined in RFC 8915
     pub const END_OF_MESSAGE_RECORD_TYPE_NUMBER: u16 = 0;
     pub const NTS_NEXT_PROTOCOL_RECORD_TYPE_NUMBER: u16 = 1;
@@ -59,7 +58,7 @@ pub mod ntske {
 
     #[derive(Debug)]
     pub struct ServerNegotiationRecord {
-        pub server_address: IpAddr,
+        pub server_address: String,
     }
 
     #[derive(Debug)]

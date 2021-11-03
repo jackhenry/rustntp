@@ -1,5 +1,3 @@
-use std::net::IpAddr;
-
 use rustntp::establishment::ClientEstablishment;
 use rustntp::protocol::ntske::*;
 use rustntp::support;

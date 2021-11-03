@@ -1,22 +1,30 @@
-use std::fmt;
 
-use crate::response::{ExecutionResponseType};
+use crate::{config::ClientConfig, response::{ExecutionResponseType}};
 
-pub trait ExecutionRequest {
-    type ResponseType: fmt::Debug;
-    fn execute(&self) -> Self::ResponseType;
+pub type ExecuteFnPtr = fn(config: &ClientConfig) -> ExecutionResponseType; 
+
+pub trait ExecutionCreator {
+    fn create_executable() -> ExecuteFnPtr;
 }
 
-pub struct ExecutionHandler {
-    commands: Vec<Box<dyn ExecutionRequest<ResponseType = ExecutionResponseType>>>,
+pub struct ExecutionRequest {
+    pub handler: ExecuteFnPtr,
 }
 
-impl ExecutionHandler {
-    pub fn new() -> Self {
-        Self { commands: vec![] }
+pub struct ExecutionHandler<'a> {
+    config: &'a ClientConfig,
+    commands: Vec<ExecutionRequest>,
+}
+
+impl<'a> ExecutionHandler<'a> {
+    pub fn from(config: &'a ClientConfig) -> Self {
+        Self {
+            config,
+            commands: vec![] 
+        }
     }
 
-    pub fn enqueue(&mut self, command: Box<dyn ExecutionRequest<ResponseType = ExecutionResponseType>>) {
+    pub fn enqueue(&mut self, command: ExecutionRequest) {
         self.commands.push(command);
     }
 
@@ -25,7 +33,7 @@ impl ExecutionHandler {
         let responses = self
             .commands
             .iter()
-            .map(|command| command.execute())
+            .map(|command| (command.handler)(self.config))
             .collect();
         // Clear all commands
         self.commands.clear();

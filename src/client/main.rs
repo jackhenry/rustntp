@@ -4,7 +4,7 @@ use argh::FromArgs;
 use config::ClientConfig;
 use rustntp::tcp::NTSPacketTransform;
 
-use crate::{config::{ConfigManager, NTSKeyExchangeServer}, execution::ExecutionHandler, ntske::KeyEstablishment};
+use crate::{config::{ConfigManager, NTSKeyExchangeServer}, execution::{ExecutionCreator, ExecutionHandler, ExecutionRequest}, ntske::KeyEstablishment};
 
 mod builder;
 mod config;
@@ -25,7 +25,7 @@ struct ClientArguments {
 
 fn main() -> std::io::Result<()> {
     //let options: ClientArguments = argh::from_env();
-    let config = ConfigManager::load_from_or_default(&String::from("/home/jack/"));
+    let config = ConfigManager::load_from_or_default(&String::from("/home/jack/")).unwrap();
     println!("{:?}", config);
 
     let server = NTSKeyExchangeServer {
@@ -33,8 +33,9 @@ fn main() -> std::io::Result<()> {
         port: Some(4406)
     };
     
-    let mut handler = ExecutionHandler::new();
-    handler.enqueue(Box::from(KeyEstablishment::new(server)));
+    let mut handler = ExecutionHandler::from(&config);
+    handler.enqueue(ExecutionRequest { handler: KeyEstablishment::create_executable() });
+    println!("{:?}", handler.execute_all());
 
     Ok(())
 }

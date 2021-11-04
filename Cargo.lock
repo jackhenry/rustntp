@@ -364,6 +364,7 @@ name = "rustntp"
 version = "0.1.0"
 dependencies = [
  "argh",
+ "rustls",
  "rustls-pemfile",
  "serde",
  "thiserror",
@@ -373,6 +374,7 @@ dependencies = [
  "tracing",
  "tracing-subscriber",
  "webpki",
+ "webpki-roots",
 ]
 
 [[package]]
@@ -683,6 +685,15 @@ checksum = "f095d78192e208183081cc07bc5515ef55216397af48b873e5edcd72637fa1bd"
 dependencies = [
  "ring",
  "untrusted",
+]
+
+[[package]]
+name = "webpki-roots"
+version = "0.22.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c475786c6f47219345717a043a37ec04cb4bc185e28853adcc4fa0a947eba630"
+dependencies = [
+ "webpki",
 ]
 
 [[package]]

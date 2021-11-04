@@ -21,10 +21,12 @@ path = "src/common/lib.rs"
 tokio = { version = "1.13.0", features = [ "full" ] }
 argh = "0.1"
 tokio-rustls = "0.23"
+rustls = "0.20"
 rustls-pemfile = "0.2.1"
 tracing = "0.1"
 tracing-subscriber = { version = "0.2", default-features = false, features = ["fmt", "ansi", "env-filter", "chrono", "tracing-log"] }
 webpki = "0.22"
+webpki-roots = "0.22"
 thiserror = "1.0"
 toml = "0.5"
 serde = { version = "1.0", features = ["derive"]}

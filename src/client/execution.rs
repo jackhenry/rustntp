@@ -1,7 +1,8 @@
+use tokio_rustls::TlsConnector;
 
-use crate::{config::ClientConfig, response::{ExecutionResponseType}};
+use crate::{config::ClientConfig, response::ExecutionResponseType};
 
-pub type ExecuteFnPtr = fn(config: &ClientConfig) -> ExecutionResponseType; 
+pub type ExecuteFnPtr = fn(config: &ClientConfig) -> ExecutionResponseType;
 
 pub trait ExecutionCreator {
     fn create_executable() -> ExecuteFnPtr;
@@ -20,7 +21,7 @@ impl<'a> ExecutionHandler<'a> {
     pub fn from(config: &'a ClientConfig) -> Self {
         Self {
             config,
-            commands: vec![] 
+            commands: vec![],
         }
     }
 

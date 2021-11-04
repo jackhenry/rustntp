@@ -10,8 +10,10 @@ pub enum Error {
 
     #[error("Client establishment is missing `{0}` record")]
     MissingEstablishmentRecord(String),
-    
+
     #[error("Client config could not be read")]
     InvalidClientConfig,
-    
+
+    #[error("No valid NTS-KE server in config")]
+    MissingNTSKEServerInConfig,
 }

@@ -27,7 +27,7 @@ pub struct Pool {
 }
 
 const DEFAULT_NTP_PORT: u16 = 123;
-const DEFAULT_NTP_SERVER_HOST: &str = "127.0.0.1";
+const DEFAULT_NTP_SERVER_HOST: &str = "localhost";
 
 impl Default for ClientConfig {
     fn default() -> Self {

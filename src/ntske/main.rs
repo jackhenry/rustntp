@@ -9,6 +9,7 @@ use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use tokio::io::{copy, sink, split, AsyncWriteExt};
 use tokio::net::{TcpListener, TcpStream};
+use tokio::runtime::{self, Runtime};
 use tokio::sync::Mutex;
 use tokio_rustls::rustls::{self, Certificate, PrivateKey};
 use tokio_rustls::TlsAcceptor;
@@ -46,8 +47,7 @@ fn load_keys(path: &Path) -> io::Result<Vec<PrivateKey>> {
         .map(|mut keys| keys.drain(..).map(PrivateKey).collect())
 }
 
-#[tokio::main]
-async fn main() -> Result<(), Box<dyn Error>> {
+fn main() -> Result<(), Box<dyn Error>> {
     use tracing_subscriber::{fmt::format::FmtSpan, EnvFilter};
     tracing_subscriber::fmt()
         .with_env_filter(EnvFilter::from_default_env().add_directive(LevelFilter::INFO.into()))
@@ -69,43 +69,33 @@ async fn main() -> Result<(), Box<dyn Error>> {
         .with_single_cert(certs, keys.remove(0))
         .map_err(|err| io::Error::new(io::ErrorKind::InvalidInput, err))?;
 
-    let state = Arc::new(Mutex::new(Shared::new()));
-
     let acceptor = TlsAcceptor::from(Arc::new(config));
-    let listener = TcpListener::bind(&addr).await?;
-    tracing::info!("server running on {}", addr);
 
-    loop {
-        let (stream, peer_address) = listener.accept().await?;
-        let acceptor = acceptor.clone();
+    let rt = runtime::Builder::new_current_thread()
+        .enable_all()
+        .build()
+        .unwrap();
 
-        let state = Arc::clone(&state);
+    rt.block_on(async {
+        let listener = TcpListener::bind(&addr).await?;
+        println!("server running on {}", addr);
 
-        tokio::spawn(async move {
-            tracing::debug!("accepted new connection");
-            tracing::debug!("spawning new client handler");
-            let handler = ClientHandler::from(stream, acceptor, peer_address);
-            handler.run();
-        });
-    }
+        loop {
+            let (stream, peer_address) = listener.accept().await?;
+            let acceptor = acceptor.clone();
+
+            tokio::spawn(async move {
+                println!("accepted new connection");
+                println!("spawning new client handler");
+                ClientHandler::run(stream, acceptor).await;
+            });
+        }
+    })
 }
 
 type KeyMaterial = Vec<u8>;
 
-struct Shared {
-    peers: HashMap<SocketAddr, KeyMaterial>,
-}
-
-impl Shared {
-    fn new() -> Self {
-        Shared {
-            peers: HashMap::new(),
-        }
-    }
-}
-
 async fn process(
-    state: Arc<Mutex<Shared>>,
     stream: TcpStream,
     acceptor: TlsAcceptor,
     addr: SocketAddr,

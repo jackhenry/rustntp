@@ -14,6 +14,10 @@ use tokio_rustls::rustls::{self, Certificate, PrivateKey};
 use tokio_rustls::TlsAcceptor;
 use tracing::metadata::LevelFilter;
 
+use crate::client_handler::ClientHandler;
+
+mod client_handler;
+
 /// Tokio Rustls server example
 #[derive(FromArgs)]
 struct Options {
@@ -72,16 +76,16 @@ async fn main() -> Result<(), Box<dyn Error>> {
     tracing::info!("server running on {}", addr);
 
     loop {
-        let (stream, peer_addr) = listener.accept().await?;
+        let (stream, peer_address) = listener.accept().await?;
         let acceptor = acceptor.clone();
 
         let state = Arc::clone(&state);
 
         tokio::spawn(async move {
             tracing::debug!("accepted new connection");
-            if let Err(err) = process(state, stream, acceptor, peer_addr).await {
-                eprintln!("{:?}", err);
-            }
+            tracing::debug!("spawning new client handler");
+            let handler = ClientHandler::from(stream, acceptor, peer_address);
+            handler.run();
         });
     }
 }

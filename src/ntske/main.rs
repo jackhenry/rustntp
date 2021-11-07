@@ -1,6 +1,6 @@
 use argh::FromArgs;
 use rustls::server::NoClientAuth;
-use rustls_pemfile::{certs, rsa_private_keys};
+use rustls_pemfile::{certs, pkcs8_private_keys, rsa_private_keys};
 use std::collections::HashMap;
 use std::error::Error;
 use std::fs::File;
@@ -45,7 +45,7 @@ fn load_certs(path: &Path) -> io::Result<Vec<Certificate>> {
 }
 
 fn load_keys(path: &Path) -> io::Result<Vec<PrivateKey>> {
-    rsa_private_keys(&mut BufReader::new(File::open(path)?))
+    pkcs8_private_keys(&mut BufReader::new(File::open(path)?))
         .map_err(|_| io::Error::new(io::ErrorKind::InvalidInput, "invalid key"))
         .map(|mut keys| keys.drain(..).map(PrivateKey).collect())
 }
@@ -66,6 +66,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
         .ok_or_else(|| io::Error::from(io::ErrorKind::AddrNotAvailable))?;
     let certs = load_certs(&options.cert)?;
     let mut keys = load_keys(&options.key)?;
+    println!("{:?}", keys);
 
     let config = rustls::ServerConfig::builder()
         .with_safe_defaults()

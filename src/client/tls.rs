@@ -10,15 +10,11 @@ pub struct TLS {}
 impl TLS {
     pub fn client_connection_for(server_address: &String) -> rustls::ClientConnection {
         let mut root_cert_store = RootCertStore::empty();
-        root_cert_store.add_server_trust_anchors(webpki_roots::TLS_SERVER_ROOTS.0.iter().map(
-            |ta| {
-                OwnedTrustAnchor::from_subject_spki_name_constraints(
-                    ta.subject,
-                    ta.spki,
-                    ta.name_constraints,
-                )
-            },
-        ));
+        for cert in rustls_native_certs::load_native_certs().expect("could not load platform certs")
+        {
+            println!("{:?}", cert.0);
+            root_cert_store.add(&rustls::Certificate(cert.0)).unwrap();
+        }
 
         let config = rustls::ClientConfig::builder()
             .with_safe_defaults()

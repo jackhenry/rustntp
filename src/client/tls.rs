@@ -1,3 +1,5 @@
+use std::fs::File;
+use std::io::BufReader;
 use std::sync::Arc;
 
 use rustls::OwnedTrustAnchor;
@@ -17,12 +19,14 @@ impl TLS {
                 )
             },
         ));
+
         let config = rustls::ClientConfig::builder()
             .with_safe_defaults()
             .with_root_certificates(root_cert_store)
             .with_no_client_auth();
-        println!("dns name: {}", server_address);
+
         let server_name = server_address.as_str().try_into().unwrap();
+        println!("dns name: {:?}", server_name);
 
         rustls::ClientConnection::new(Arc::new(config), server_name).unwrap()
     }

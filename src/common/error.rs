@@ -16,4 +16,10 @@ pub enum Error {
 
     #[error("No valid NTS-KE server in config")]
     MissingNTSKEServerInConfig,
+
+    #[error("Unable to decode client establishment records")]
+    ClientEstablishmentDecodeError,
+
+    #[error("{0}")]
+    NTSEstablishmentDecodeError(String),
 }

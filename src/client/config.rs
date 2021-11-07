@@ -26,7 +26,8 @@ pub struct Pool {
     pub port: Option<u16>,
 }
 
-const DEFAULT_NTP_PORT: u16 = 123;
+//TODO: change this
+const DEFAULT_NTP_PORT: u16 = 9001;
 const DEFAULT_NTP_SERVER_HOST: &str = "localhost";
 
 impl Default for ClientConfig {

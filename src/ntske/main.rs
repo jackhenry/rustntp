@@ -1,4 +1,5 @@
 use argh::FromArgs;
+use rustls::server::NoClientAuth;
 use rustls_pemfile::{certs, rsa_private_keys};
 use std::collections::HashMap;
 use std::error::Error;
@@ -18,6 +19,8 @@ use tracing::metadata::LevelFilter;
 use crate::client_handler::ClientHandler;
 
 mod client_handler;
+mod decoder;
+mod keygen;
 
 /// Tokio Rustls server example
 #[derive(FromArgs)]
@@ -47,10 +50,11 @@ fn load_keys(path: &Path) -> io::Result<Vec<PrivateKey>> {
         .map(|mut keys| keys.drain(..).map(PrivateKey).collect())
 }
 
-fn main() -> Result<(), Box<dyn Error>> {
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn Error>> {
     use tracing_subscriber::{fmt::format::FmtSpan, EnvFilter};
     tracing_subscriber::fmt()
-        .with_env_filter(EnvFilter::from_default_env().add_directive(LevelFilter::INFO.into()))
+        .with_env_filter(EnvFilter::from_default_env())
         .with_span_events(FmtSpan::FULL)
         .init();
 
@@ -65,32 +69,33 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     let config = rustls::ServerConfig::builder()
         .with_safe_defaults()
-        .with_no_client_auth()
+        .with_client_cert_verifier(NoClientAuth::new())
         .with_single_cert(certs, keys.remove(0))
         .map_err(|err| io::Error::new(io::ErrorKind::InvalidInput, err))?;
 
     let acceptor = TlsAcceptor::from(Arc::new(config));
 
-    let rt = runtime::Builder::new_current_thread()
-        .enable_all()
-        .build()
-        .unwrap();
+    let listener = TcpListener::bind(&addr).await?;
+    tracing::debug!("server running on {}", addr);
 
-    rt.block_on(async {
-        let listener = TcpListener::bind(&addr).await?;
-        println!("server running on {}", addr);
+    loop {
+        let (stream, peer_address) = listener.accept().await?;
+        let acceptor = acceptor.clone();
+        tracing::trace!("Accepted new incoming connection from {}", peer_address);
+        let handler_result = ClientHandler::run(stream, acceptor, peer_address)
+            .await
+            .unwrap();
 
-        loop {
-            let (stream, peer_address) = listener.accept().await?;
-            let acceptor = acceptor.clone();
-
-            tokio::spawn(async move {
-                println!("accepted new connection");
-                println!("spawning new client handler");
-                ClientHandler::run(stream, acceptor).await;
-            });
-        }
-    })
+        /* match handler_result {
+            Ok(a) => {
+                tracing::trace!("{:?}", a);
+            }
+            Err(error) => {
+                tracing::error!("from {}: {:?}", peer_address, error);
+            }
+        }; */
+    }
+    Ok(())
 }
 
 type KeyMaterial = Vec<u8>;

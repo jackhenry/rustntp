@@ -11,6 +11,10 @@ path = "src/ntske/main.rs"
 name = "client"
 path = "src/client/main.rs"
 
+[[bin]]
+name = "ntp"
+path = "src/ntp/main.rs"
+
 [lib]
 name = "rustntp"
 path = "src/common/lib.rs"

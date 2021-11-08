@@ -10,5 +10,4 @@ impl NTSConnection {
         let con_str = format!("{}:{}", host, port);
         Ok(NTSConnection { con_str })
     }
-    fn key_establishment(&self) {}
 }

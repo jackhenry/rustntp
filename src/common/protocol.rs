@@ -2,6 +2,23 @@
 // Only NTP is supported current
 pub const NTS_NEXT_PROTOCOL_NTP_ID: u16 = 0;
 
+pub mod ntp {
+    use crate::Helper;
+
+    #[derive(Debug)]
+    pub struct Timestamp {
+        pub value: f32,
+    }
+
+    impl Timestamp {
+        pub fn from(buffer_slice: &[u8]) -> Self {
+            Self {
+                value: Helper::to_ntp_floating(buffer_slice),
+            }
+        }
+    }
+}
+
 pub mod ntske {
     pub const DEFAULT_NTS_PORT: u16 = 4406;
     // Recrod type numbers defined in RFC 8915

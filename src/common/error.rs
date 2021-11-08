@@ -22,4 +22,10 @@ pub enum Error {
 
     #[error("{0}")]
     NTSEstablishmentDecodeError(String),
+
+    #[error("{0}")]
+    InvalidNTPPacket(String),
+
+    #[error("{0}")]
+    ClientNotReachable(String),
 }

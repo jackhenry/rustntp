@@ -9,16 +9,12 @@ use tokio_rustls::{
 use crate::{
     config::{ConfigManager, NTSKeyExchangeServer},
     execution::{ExecutionCreator, ExecutionHandler, ExecutionRequest},
-    ntske::KeyEstablishment,
 };
 
-mod builder;
 mod config;
 mod connection;
 mod execution;
-mod ntske;
 mod response;
-mod tls;
 
 #[derive(FromArgs)]
 /// Client arguments
@@ -36,10 +32,6 @@ fn main() -> std::io::Result<()> {
     println!("{:?}", config);
 
     let mut handler = ExecutionHandler::from(&config);
-    handler.enqueue(ExecutionRequest {
-        handler: KeyEstablishment::create_executable(),
-    });
-    println!("{:?}", handler.execute_all());
 
     Ok(())
 }

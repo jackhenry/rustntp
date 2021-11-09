@@ -38,14 +38,4 @@ pub mod helper {
         let value = (*&leading as i16) as f32 + frac;
         value
     }
-
-    pub fn to_floating_point(leading: u32, fraction_part: u32) -> f32 {
-        let leading_zeros = fraction_part.leading_zeros() as f32;
-        let fraction = leading as f32 * 10f32.powf(-1.0 * (32.0 - leading_zeros));
-        return (leading as f32) + fraction;
-    }
-
-    pub fn fraction_bits_to_decimal(frac: u32) -> u64 {
-        return ((frac as u64) * 10 ^ 6) >> 31;
-    }
 }

@@ -81,6 +81,6 @@ mod test {
         let packet = NTPPacket::from(&test_buffer);
         println!("{:?}", packet);
         assert_eq!(packet.transmit.seconds, 3845408475);
-        assert_eq!(packet.transmit.fraction, 0.605161);
+        assert_eq!(packet.transmit.fraction, 0.60516);
     }
 }

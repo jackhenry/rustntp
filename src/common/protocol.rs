@@ -42,11 +42,8 @@ pub mod ntp {
             }
 
             let mut fraction = fraction_field as f64 / u32::MAX as f64;
-            println!("TEST");
-            println!("precision: {}", precision);
             fraction = (fraction * 10_f64.powi(precision.abs() as i32)).trunc()
                 / 10_f64.powi(precision.abs() as i32);
-            println!("FRAC: {}", fraction);
             Self {
                 seconds: seconds as u64,
                 fraction,

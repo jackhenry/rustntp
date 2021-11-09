@@ -9,60 +9,68 @@ pub mod ntp {
     use chrono::NaiveDateTime;
     use chrono::Utc;
 
-    use crate::Helper;
+    use crate::helper;
 
-    const SECONDS_TO_UNIX: u32 = 2208988800;
+    const SECONDS_TO_UNIX: i64 = 2208988800;
 
     pub struct Timestamp {
-        pub value: f64,
+        pub seconds: u64,
+        pub fraction: f64,
     }
 
     impl Timestamp {
         pub fn from(buffer_slice: &[u8], precision: i8) -> Self {
-            let seconds = Helper::combine_bytes_to_u32_be(
+            println!("buffer: {:?}", buffer_slice);
+            let seconds = helper::combine_bytes_to_u32_be(
                 &buffer_slice[0],
                 &buffer_slice[1],
                 &buffer_slice[2],
                 &buffer_slice[3],
             );
-            let fraction = Helper::combine_bytes_to_u32_be(
+            let fraction_field = helper::combine_bytes_to_u32_be(
                 &buffer_slice[4],
                 &buffer_slice[5],
                 &buffer_slice[6],
                 &buffer_slice[7],
             );
 
-            if seconds == 0 && fraction == 0 {
-                return Self { value: 0.0 };
+            if seconds == 0 && fraction_field == 0 {
+                return Self {
+                    seconds: 0,
+                    fraction: 0.0,
+                };
             }
 
-            let mut decimal_fraction = Helper::fraction_bits_to_decimal(precision, fraction);
-            // Let n equal the leading digits of the decimal fraction.
-            // multiple the fraction by 10^-n in order to move all significant bits to right of decimal place
-            let leading_digits = decimal_fraction.round().to_string().len();
-            decimal_fraction = decimal_fraction * (10_f32.powf(-1_f32 * leading_digits as f32));
-            // Final epoch is the seconds added to the fraction
-            let final_epoch = (seconds as f64) + (decimal_fraction as f64);
-
-            Self { value: final_epoch }
+            let mut fraction = fraction_field as f64 / u32::MAX as f64;
+            println!("TEST");
+            println!("precision: {}", precision);
+            fraction = (fraction * 10_f64.powi(precision.abs() as i32)).trunc()
+                / 10_f64.powi(precision.abs() as i32);
+            println!("FRAC: {}", fraction);
+            Self {
+                seconds: seconds as u64,
+                fraction,
+            }
         }
 
         pub fn to_date_str(&self) -> String {
-            let unix = self.value - (SECONDS_TO_UNIX as f64);
-            let naive = NaiveDateTime::from_timestamp(
-                unix.round() as i64,
-                (unix.fract() * 10_f64.powf(9_f64)) as u32,
-            );
+            let unix: i64 = self.seconds as i64 - SECONDS_TO_UNIX;
+            let naive = NaiveDateTime::from_timestamp(unix, 0);
             let datetime: DateTime<Utc> = DateTime::from_utc(naive, Utc);
-            let newdate = datetime.format("%Y-%m-%d %H:%M:%S%.f");
-            return format!("{}", newdate);
+            let newdate = datetime.format("%Y-%m-%d %H:%M:%S");
+            return format!(
+                "{}.{}",
+                newdate,
+                self.fraction.to_string().split(".").last().unwrap()
+            );
         }
     }
 
     impl Debug for Timestamp {
         fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
             f.debug_struct("Timestamp")
-                .field("value", &self.value)
+                .field("seconds", &self.seconds)
+                .field("fraction", &self.fraction)
                 .field("date string", &self.to_date_str())
                 .finish()
         }

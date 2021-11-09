@@ -19,6 +19,10 @@ path = "src/ntp/main.rs"
 name = "rustntp"
 path = "src/common/lib.rs"
 
+[[test]]
+name = "common"
+path = "tests/common.rs"
+
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
@@ -36,3 +40,7 @@ toml = "0.5"
 serde = { version = "1.0", features = ["derive"]}
 rustls-native-certs = "0.6.1"
 chrono = "0.4.19"
+nix = "0.23.0"
+
+[dev-dependencies]
+rand = "0.8.4"

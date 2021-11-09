@@ -1,4 +1,4 @@
-pub mod Helper {
+pub mod helper {
     pub fn u16_to_i16(value: &u16) -> i16 {
         let sign = value >> 15;
         let converted = (value & 0x7FFF) as i16;
@@ -21,6 +21,10 @@ pub mod Helper {
         return ((w0 as u32) << 16) | w1 as u32;
     }
 
+    pub fn combine_u32_to_u64(u0: &u32, u1: &u32) -> u64 {
+        return ((*u0 as u64) << 32) | *u1 as u64;
+    }
+
     pub fn to_ntp_floating(buffer_slice: &[u8]) -> f32 {
         let b0 = buffer_slice[0];
         let b1 = buffer_slice[1];
@@ -41,7 +45,7 @@ pub mod Helper {
         return (leading as f32) + fraction;
     }
 
-    pub fn fraction_bits_to_decimal(precision: i8, frac: u32) -> f32 {
-        return (10f32.powf(-1.0 * precision as f32)) * (frac as f32 / 2f32.powf(32.0));
+    pub fn fraction_bits_to_decimal(frac: u32) -> u64 {
+        return ((frac as u64) * 10 ^ 6) >> 31;
     }
 }

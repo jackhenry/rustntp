@@ -37,7 +37,9 @@ impl Server {
                     continue;
                 }
                 let message = &buffer[..size];
-                println!("{:?}", NTPPacket::from(message));
+                println!("{:?}", message);
+                let packet = NTPPacket::from(message);
+                println!("{:?}", packet);
                 if let Ok(num_bytes) = socket.send_to(message, &peer).await {
                     tracing::debug!("Echoed {}/{} bytes to {}", num_bytes, size, peer);
                 } else {

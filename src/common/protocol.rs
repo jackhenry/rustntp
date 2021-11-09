@@ -8,10 +8,10 @@ pub mod ntp {
     use chrono::DateTime;
     use chrono::NaiveDateTime;
     use chrono::Utc;
+    use nix::sys::time::TimeSpec;
 
     use crate::helper;
-
-    const SECONDS_TO_UNIX: i64 = 2208988800;
+    use crate::systime::SECONDS_TO_UNIX;
 
     pub struct Timestamp {
         pub seconds: u64,
@@ -20,7 +20,6 @@ pub mod ntp {
 
     impl Timestamp {
         pub fn from(buffer_slice: &[u8], precision: i8) -> Self {
-            println!("buffer: {:?}", buffer_slice);
             let seconds = helper::combine_bytes_to_u32_be(
                 &buffer_slice[0],
                 &buffer_slice[1],
@@ -50,6 +49,15 @@ pub mod ntp {
             }
         }
 
+        pub fn from_timespec(time_spec: TimeSpec) -> Self {
+            let seconds = time_spec.tv_sec() + SECONDS_TO_UNIX;
+            let fraction = time_spec.tv_nsec() as f64 * 10_f64.powf(-9.0);
+            Self {
+                seconds: seconds as u64,
+                fraction,
+            }
+        }
+
         pub fn to_date_str(&self) -> String {
             let unix: i64 = self.seconds as i64 - SECONDS_TO_UNIX;
             let naive = NaiveDateTime::from_timestamp(unix, 0);
@@ -60,6 +68,15 @@ pub mod ntp {
                 newdate,
                 self.fraction.to_string().split(".").last().unwrap()
             );
+        }
+    }
+
+    impl Clone for Timestamp {
+        fn clone(&self) -> Self {
+            Self {
+                seconds: self.seconds.clone(),
+                fraction: self.fraction.clone(),
+            }
         }
     }
 

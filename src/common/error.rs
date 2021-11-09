@@ -28,4 +28,7 @@ pub enum Error {
 
     #[error("{0}")]
     ClientNotReachable(String),
+
+    #[error("{0}")]
+    SystemTimeError(String),
 }

@@ -1,21 +1,29 @@
+use fixed::traits::Fixed;
+use fixed::types::extra::U16;
+use fixed::types::extra::U32;
+use fixed::FixedU32;
+use fixed::FixedU64;
+use typed_builder::TypedBuilder;
+
 use crate::helper;
 use crate::protocol::ntp::Timestamp;
+use crate::systime::SystemTime;
 
-#[derive(Debug)]
+#[derive(Debug, TypedBuilder)]
 pub struct NTPPacket {
-    leap: u8,
-    version: u8,
-    mode: u8,
-    stratum: u8,
-    poll: u8,
-    precision: i8,
-    root_delay: f32,
-    root_dispersion: f32,
-    ref_id: Option<String>,
-    reference: Timestamp,
-    originate: Timestamp,
-    receive: Timestamp,
-    transmit: Timestamp,
+    pub leap: u8,
+    pub version: u8,
+    pub mode: u8,
+    pub stratum: u8,
+    pub poll: u8,
+    pub precision: i8,
+    pub root_delay: FixedU32<U16>,
+    pub root_dispersion: FixedU32<U16>,
+    pub ref_id: Option<String>,
+    pub reference: FixedU64<U32>,
+    pub originate: FixedU64<U32>,
+    pub receive: FixedU64<U32>,
+    pub transmit: FixedU64<U32>,
 }
 
 impl NTPPacket {
@@ -26,13 +34,35 @@ impl NTPPacket {
         let stratum = buffer[1];
         let poll = buffer[2];
         let precision = buffer[3] as i8;
-        let root_delay = helper::to_ntp_floating(&buffer[4..8]);
-        let root_dispersion = helper::to_ntp_floating(&buffer[8..12]);
+        let root_delay =
+            FixedU32::<U16>::from_be_bytes([buffer[4], buffer[5], buffer[6], buffer[7]]);
+        let root_dispersion =
+            FixedU32::<U16>::from_be_bytes([buffer[8], buffer[9], buffer[10], buffer[11]]);
         let ref_id = String::from_utf8(Vec::from(&buffer[12..16])).ok();
-        let reference = Timestamp::from(&buffer[16..24], precision);
-        let originate = Timestamp::from(&buffer[24..32], precision);
-        let receive = Timestamp::from(&buffer[32..40], precision);
-        let transmit = Timestamp::from(&buffer[40..48], precision);
+
+        // buffer[16..24]
+        let reference = FixedU64::<U32>::from_be_bytes([
+            buffer[16], buffer[17], buffer[18], buffer[19], buffer[20], buffer[21], buffer[22],
+            buffer[23],
+        ]);
+
+        // buffer[24..32]
+        let originate = FixedU64::<U32>::from_be_bytes([
+            buffer[24], buffer[25], buffer[26], buffer[27], buffer[28], buffer[29], buffer[30],
+            buffer[31],
+        ]);
+
+        // buffer[32..40]
+        let receive = FixedU64::<U32>::from_be_bytes([
+            buffer[32], buffer[33], buffer[34], buffer[35], buffer[36], buffer[37], buffer[38],
+            buffer[39],
+        ]);
+
+        // buffer[40..48]
+        let transmit = FixedU64::<U32>::from_be_bytes([
+            buffer[40], buffer[41], buffer[42], buffer[43], buffer[44], buffer[45], buffer[46],
+            buffer[47],
+        ]);
 
         Self {
             leap,
@@ -49,6 +79,37 @@ impl NTPPacket {
             receive,
             transmit,
         }
+    }
+
+    pub fn mark_received(&mut self, timestamp: FixedU64<U32>) {
+        self.receive = timestamp;
+    }
+    pub fn mark_for_transmission(&mut self, timestamp: FixedU64<U32>) {
+        self.originate = self.transmit.clone();
+        //todo fix
+        self.transmit = timestamp;
+    }
+
+    pub fn to_network_bytes(&self) -> Vec<u8> {
+        let mut byte0 = 0;
+        byte0 = (byte0 | self.leap) << 6;
+        byte0 = (byte0 | self.version) << 3;
+        byte0 = byte0 | 4u8;
+        let mut buffer: Vec<u8> = Vec::new();
+        buffer.push(byte0);
+        buffer.push(1);
+        buffer.push(17);
+        buffer.push(self.precision as u8);
+        buffer.append(&mut Vec::from(self.root_delay.to_be_bytes()));
+        buffer.append(&mut Vec::from(self.root_dispersion.to_be_bytes()));
+        let refid: [u8; 4] = [67, 69, 83, 77];
+        buffer.append(&mut Vec::from(refid));
+
+        buffer.append(&mut Vec::from(self.reference.to_be_bytes()));
+        buffer.append(&mut Vec::from(self.originate.to_be_bytes()));
+        buffer.append(&mut Vec::from(self.receive.to_be_bytes()));
+        buffer.append(&mut Vec::from(self.transmit.to_be_bytes()));
+        buffer
     }
 }
 
@@ -68,6 +129,11 @@ mod test {
         }
         // precision
         test_buffer[3] = 250;
+        // root delay
+        test_buffer[4] = 0;
+        test_buffer[5] = 1;
+        test_buffer[6] = 250;
+        test_buffer[7] = 0;
         //e5 34 46 db 9a eb c7 8a
         test_buffer[40] = 229;
         test_buffer[41] = 52;
@@ -80,7 +146,5 @@ mod test {
 
         let packet = NTPPacket::from(&test_buffer);
         println!("{:?}", packet);
-        assert_eq!(packet.transmit.seconds, 3845408475);
-        assert_eq!(packet.transmit.fraction, 0.60516);
     }
 }

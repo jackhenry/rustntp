@@ -41,6 +41,8 @@ serde = { version = "1.0", features = ["derive"]}
 rustls-native-certs = "0.6.1"
 chrono = "0.4.19"
 nix = "0.23.0"
+typed-builder = "0.9.1"
+fixed = "1.10.0"
 
 [dev-dependencies]
 rand = "0.8.4"

@@ -5,7 +5,9 @@ use tokio::net::UdpSocket;
 
 use crate::server::Server;
 
+mod handler;
 mod server;
+mod timeprovider;
 
 /// ntp command line options
 #[derive(FromArgs)]

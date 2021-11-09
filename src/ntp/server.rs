@@ -1,7 +1,13 @@
 use std::net::SocketAddr;
 
 use rustntp::packet::NTPPacket;
+use rustntp::protocol::ntp::Timestamp;
+use rustntp::systime::SystemTime;
 use tokio::net::UdpSocket;
+
+use crate::handler::ClientModeHandler;
+use crate::timeprovider::LoopbackProvider;
+use crate::timeprovider::TimeProvider;
 
 pub struct Server {
     pub socket: UdpSocket,
@@ -16,6 +22,8 @@ impl Server {
             mut buffer,
             mut to_send,
         } = self;
+
+        let time_provider = LoopbackProvider::new();
 
         loop {
             // Wait for next packet to receive
@@ -37,14 +45,23 @@ impl Server {
                     continue;
                 }
                 let message = &buffer[..size];
-                println!("{:?}", message);
-                let packet = NTPPacket::from(message);
-                println!("{:?}", packet);
-                if let Ok(num_bytes) = socket.send_to(message, &peer).await {
+                let client_handler = ClientModeHandler::<LoopbackProvider>::new(
+                    &socket,
+                    &peer,
+                    &message,
+                    &time_provider,
+                );
+                client_handler.process().await;
+
+                /*                 tracing::debug!("{:?}", packet);
+                if let Ok(num_bytes) = socket
+                    .send_to(&packet.to_network_bytes().to_vec(), &peer)
+                    .await
+                {
                     tracing::debug!("Echoed {}/{} bytes to {}", num_bytes, size, peer);
                 } else {
                     tracing::debug!("Unable to send response to client {}", peer.ip());
-                }
+                } */
             };
         }
     }

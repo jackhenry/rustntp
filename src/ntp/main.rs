@@ -4,9 +4,12 @@ use std::net::ToSocketAddrs;
 use tokio::net::UdpSocket;
 
 use crate::server::Server;
+use crate::timeprovider::LoopbackProvider;
+use crate::timeprovider::TimeProvider;
 
 mod handler;
 mod server;
+mod sync;
 mod timeprovider;
 
 /// ntp command line options
@@ -32,15 +35,11 @@ async fn main() -> Result<(), Box<dyn Error>> {
         .next()
         .ok_or_else(|| std::io::Error::from(std::io::ErrorKind::AddrNotAvailable))?;
 
-    println!("Address: {:?}", addr);
     let socket = UdpSocket::bind(&addr).await?;
     tracing::debug!("Listening on: {}", socket.local_addr()?);
 
-    let server = Server {
-        socket,
-        buffer: vec![0; 1024],
-        to_send: None,
-    };
+    let time_source = LoopbackProvider::new();
+    let server = Server::<LoopbackProvider>::new(socket, time_source);
 
     server.run().await?;
 

@@ -1,58 +1,57 @@
 use std::net::SocketAddr;
+use std::sync::Arc;
+use std::sync::Mutex;
 
 use rustntp::packet::NTPPacket;
 use tokio::net::UdpSocket;
 
-use crate::timeprovider::TimeProvider;
+use crate::timeprovider::TimeProviderCache;
 
-pub struct ClientModeHandler<'a, T>
-where
-    T: TimeProvider,
-{
+pub struct ClientModeHandler<'a> {
     socket: &'a UdpSocket,
     peer: &'a SocketAddr,
     client_message: &'a [u8],
-    provider: &'a T,
+    provider_cache: &'a Arc<Mutex<TimeProviderCache>>,
 }
 
-impl<'a, T> ClientModeHandler<'a, T>
-where
-    T: TimeProvider,
-{
+impl<'a> ClientModeHandler<'a> {
     pub fn new(
         socket: &'a UdpSocket,
         peer: &'a SocketAddr,
         client_message: &'a [u8],
-        provider: &'a T,
+        provider_cache: &'a Arc<Mutex<TimeProviderCache>>,
     ) -> Self {
         Self {
             socket,
             peer,
             client_message,
-            provider,
+            provider_cache,
         }
     }
 
     pub async fn process(&self) {
         let mut packet = NTPPacket::from(self.client_message);
-        packet.mark_received(self.provider.get_ntp64_timestamp());
-        let provider = &self.provider;
+        packet.mark_received();
+        let provider = &self.provider_cache;
+        let cache = self.provider_cache.lock().unwrap();
         let builder = NTPPacket::builder()
-            .leap(provider.get_leap_indicator())
+            .leap(cache.leap_indicator)
             .version(4)
             .mode(4)
-            .stratum(provider.get_stratum())
+            .stratum(cache.startum)
             .poll(17)
-            .precision(provider.get_precision())
-            .root_delay(provider.get_root_delay())
-            .root_dispersion(provider.get_root_dispersion())
-            .ref_id(Some(provider.get_ref_id()))
-            .reference(packet.reference)
+            .precision(cache.precision)
+            .root_delay(cache.root_delay)
+            .root_dispersion(cache.root_dispersion)
+            .ref_id(cache.ref_id)
+            .reference(cache.last_sync_timestamp)
             .originate(packet.originate)
             .receive(packet.receive)
             .transmit(packet.transmit);
+        // drop the lock so other threads can use the cache
+        drop(cache);
         let mut server_packet = builder.build();
-        server_packet.mark_for_transmission(self.provider.get_ntp64_timestamp());
+        server_packet.mark_for_transmission();
         if let Ok(_response) = self
             .socket
             .send_to(&server_packet.to_network_bytes(), self.peer)

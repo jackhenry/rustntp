@@ -5,8 +5,6 @@ use fixed::FixedU32;
 use fixed::FixedU64;
 use typed_builder::TypedBuilder;
 
-use crate::helper;
-use crate::protocol::ntp::Timestamp;
 use crate::systime::SystemTime;
 
 #[derive(Debug, TypedBuilder)]
@@ -19,7 +17,7 @@ pub struct NTPPacket {
     pub precision: i8,
     pub root_delay: FixedU32<U16>,
     pub root_dispersion: FixedU32<U16>,
-    pub ref_id: Option<String>,
+    pub ref_id: [u8; 4],
     pub reference: FixedU64<U32>,
     pub originate: FixedU64<U32>,
     pub receive: FixedU64<U32>,
@@ -38,8 +36,7 @@ impl NTPPacket {
             FixedU32::<U16>::from_be_bytes([buffer[4], buffer[5], buffer[6], buffer[7]]);
         let root_dispersion =
             FixedU32::<U16>::from_be_bytes([buffer[8], buffer[9], buffer[10], buffer[11]]);
-        let ref_id = String::from_utf8(Vec::from(&buffer[12..16])).ok();
-
+        let ref_id: [u8; 4] = [buffer[12], buffer[13], buffer[14], buffer[15]];
         // buffer[16..24]
         let reference = FixedU64::<U32>::from_be_bytes([
             buffer[16], buffer[17], buffer[18], buffer[19], buffer[20], buffer[21], buffer[22],
@@ -81,13 +78,14 @@ impl NTPPacket {
         }
     }
 
-    pub fn mark_received(&mut self, timestamp: FixedU64<U32>) {
-        self.receive = timestamp;
+    pub fn mark_received(&mut self) {
+        let default = FixedU64::<U32>::from_num(0.0);
+        self.receive = SystemTime::get_ntp_epoch().unwrap_or(default);
     }
-    pub fn mark_for_transmission(&mut self, timestamp: FixedU64<U32>) {
+    pub fn mark_for_transmission(&mut self) {
         self.originate = self.transmit.clone();
-        //todo fix
-        self.transmit = timestamp;
+        let default = FixedU64::<U32>::from_num(0.0);
+        self.transmit = SystemTime::get_ntp_epoch().unwrap_or(default);
     }
 
     pub fn to_network_bytes(&self) -> Vec<u8> {
@@ -102,9 +100,11 @@ impl NTPPacket {
         buffer.push(self.precision as u8);
         buffer.append(&mut Vec::from(self.root_delay.to_be_bytes()));
         buffer.append(&mut Vec::from(self.root_dispersion.to_be_bytes()));
-        let refid: [u8; 4] = [67, 69, 83, 77];
-        buffer.append(&mut Vec::from(refid));
 
+        buffer.append(&mut Vec::from(self.ref_id));
+
+        println!("{:?}", self.transmit);
+        println!("{:?}", self.transmit.to_be_bytes());
         buffer.append(&mut Vec::from(self.reference.to_be_bytes()));
         buffer.append(&mut Vec::from(self.originate.to_be_bytes()));
         buffer.append(&mut Vec::from(self.receive.to_be_bytes()));

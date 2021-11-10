@@ -29,7 +29,6 @@ struct ClientArguments {
 fn main() -> std::io::Result<()> {
     //let options: ClientArguments = argh::from_env();
     let config = ConfigManager::load_from_or_default(&String::from("/home/jack/")).unwrap();
-    println!("{:?}", config);
 
     let mut handler = ExecutionHandler::from(&config);
 

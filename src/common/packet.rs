@@ -103,8 +103,6 @@ impl NTPPacket {
 
         buffer.append(&mut Vec::from(self.ref_id));
 
-        println!("{:?}", self.transmit);
-        println!("{:?}", self.transmit.to_be_bytes());
         buffer.append(&mut Vec::from(self.reference.to_be_bytes()));
         buffer.append(&mut Vec::from(self.originate.to_be_bytes()));
         buffer.append(&mut Vec::from(self.receive.to_be_bytes()));
@@ -115,8 +113,6 @@ impl NTPPacket {
 
 #[cfg(test)]
 mod test {
-    use super::NTPPacket;
-
     #[test]
     fn packet_creation() {
         use rand::Rng;
@@ -143,8 +139,5 @@ mod test {
         test_buffer[45] = 235;
         test_buffer[46] = 199;
         test_buffer[47] = 138;
-
-        let packet = NTPPacket::from(&test_buffer);
-        println!("{:?}", packet);
     }
 }

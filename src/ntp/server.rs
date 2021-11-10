@@ -1,4 +1,3 @@
-use std::net::SocketAddr;
 use std::sync::Arc;
 use std::sync::Mutex;
 
@@ -15,16 +14,16 @@ use crate::timeprovider::TimeProviderCache;
 
 pub struct Server<T>
 where
-    T: TimeProvider,
+    T: TimeProvider + Send + 'static,
 {
     pub socket: UdpSocket,
-    pub provider: T,
+    pub provider: Arc<Mutex<T>>,
     pub provider_cache: Arc<Mutex<TimeProviderCache>>,
 }
 
 impl<T> Server<T>
 where
-    T: TimeProvider,
+    T: TimeProvider + Send,
 {
     pub fn new(socket: UdpSocket, provider: T) -> Self {
         // sync system clock on initialization and update cache values
@@ -47,7 +46,7 @@ where
 
         let new_server = Self {
             socket,
-            provider,
+            provider: Arc::new(Mutex::new(provider)),
             provider_cache,
         };
 
@@ -55,31 +54,29 @@ where
     }
 
     pub async fn run(self) -> Result<(), rustntp::Error> {
-        let mut to_send: Option<(usize, SocketAddr)> = None;
         let mut buffer = [0; 1024];
 
-        /* std::thread::spawn(|| {
+        // Spawn a separate thread with the provider synchronizer
+        let provider_cache = Arc::clone(&self.provider_cache);
+        std::thread::spawn(move || {
             let runtime_result = runtime::Builder::new_current_thread().enable_all().build();
-
             if let Err(runtime_error) = runtime_result {
-                tracing::error!("Unable to spawn synchronization thread.")
+                tracing::error!("Unable to spawn synchronization thread.");
                 panic!("{}", runtime_error);
-
             }
-
             let runtime = runtime_result.unwrap();
 
             runtime.block_on(async {
                 let provider_synchronizer =
-                    ProviderSynchronizer::new(&self.provider, &self.provider_cache, 5000);
+                    ProviderSynchronizer::new(&self.provider, &provider_cache, 5000);
                 provider_synchronizer.run_loop().await;
             })
-        }); */
+        });
 
         loop {
             // Wait for next packet to receive
             tracing::debug!("waiting for next packet");
-            to_send = match self.socket.recv_from(&mut buffer).await {
+            let receive_result = match self.socket.recv_from(&mut buffer).await {
                 Ok(message) => Some(message),
                 Err(error) => {
                     tracing::debug!("Read error {:?}", error);
@@ -87,7 +84,7 @@ where
                 }
             };
 
-            if let Some((size, peer)) = to_send {
+            if let Some((size, peer)) = receive_result {
                 // NTP packet should be at least 48 bytes
                 if size < 48 {
                     tracing::debug!(

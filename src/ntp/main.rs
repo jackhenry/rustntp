@@ -1,13 +1,13 @@
 use argh::FromArgs;
 use std::error::Error;
 use std::net::ToSocketAddrs;
-use std::sync::Arc;
 use tokio::net::UdpSocket;
 
 use crate::server::Server;
 use crate::timeprovider::LoopbackProvider;
 use crate::timeprovider::TimeProvider;
 
+mod config;
 mod handler;
 mod server;
 mod sync;
